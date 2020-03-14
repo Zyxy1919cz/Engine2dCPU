@@ -67,8 +67,7 @@ public class GameContainer implements Runnable
 			{
 				unprocessedTime -=UPDATE_CAP;
 				render = true;
-				//System.out.println("Update");
-				
+								
 				game.update(this, (float)UPDATE_CAP);
 				
 				input.update();
