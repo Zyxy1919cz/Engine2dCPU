@@ -5,6 +5,7 @@ import java.awt.event.KeyEvent;
 import com.zyxy1919cz.engine.AbstractGame;
 import com.zyxy1919cz.engine.GameContainer;
 import com.zyxy1919cz.engine.Renderer;
+import com.zyxy1919cz.engine.audio.SoundClip;
 import com.zyxy1919cz.engine.gfx.Image;
 import com.zyxy1919cz.engine.gfx.ImageTile;
 
@@ -12,11 +13,15 @@ public class GameManager extends AbstractGame
 {
 	private ImageTile fire;
 	private Image cat;
+	private SoundClip clip;
+	
 	
 	public GameManager()
 	{
 		fire = new ImageTile("/props/fire2.png",20, 30);
 		cat = new Image("/icon/cat.png");
+		clip = new SoundClip("/sound/arrowm.wav");
+		clip.setVolume(0);
 	}
 	
 	@Override
@@ -24,7 +29,8 @@ public class GameManager extends AbstractGame
 	{
 		if(gc.getInput().isKeyDown(KeyEvent.VK_A))
 		{
-			System.out.println("A was pressed.");
+			clip.play();
+			System.out.println("A");
 		}
 		
 		temp += dt * 10;
@@ -43,6 +49,8 @@ public class GameManager extends AbstractGame
 	{
 		r.drawImage(cat, 0, 0);
 		r.drawImageTile(fire, gc.getInput().getMouseX() - 10, gc.getInput().getMouseY() - 10, (int)temp, 0);
+		r.drawRectangle(10, 10, 32, 60, 0xffffccff);
+		r.drawFillRectangle(90, 90, 30, 20, 0xffccffff);
 	}
 	
 	public static void main(String args[])
