@@ -12,6 +12,7 @@ import com.zyxy1919cz.engine.gfx.ImageTile;
 public class GameManager extends AbstractGame
 {
 	private ImageTile fire;
+	private ImageTile alpha;
 	private Image cat;
 	private SoundClip clip;
 	
@@ -19,9 +20,16 @@ public class GameManager extends AbstractGame
 	public GameManager()
 	{
 		fire = new ImageTile("/props/fire2.png",20, 30);
+		alpha =  new ImageTile("/props/firealpha.png",20,30);
+		alpha.setAlpha(true);
 		cat = new Image("/icon/cat.png");
 		clip = new SoundClip("/sound/arrowm.wav");
 		clip.setVolume(0);
+	}
+	
+	public void reset()
+	{
+		
 	}
 	
 	@Override
@@ -47,8 +55,17 @@ public class GameManager extends AbstractGame
 	@Override
 	public void render(GameContainer gc, Renderer r)
 	{
+		/*for (int x = 0; x < image.getW(); x++)
+		{
+			for (int y = 0; y < image.getH(); y++)
+			{
+				r.setLightMap(x, y, image.getP(x + y * pW));
+			}
+		}
+		*/
+		r.drawImageTile(alpha, gc.getInput().getMouseX() - 10, gc.getInput().getMouseY() -25, (int)temp, 0);
 		r.drawImage(cat, 0, 0);
-		r.drawImageTile(fire, gc.getInput().getMouseX() - 10, gc.getInput().getMouseY() - 10, (int)temp, 0);
+		r.drawImageTile(fire, 54, 100, (int)temp, 0);
 		r.drawRectangle(10, 10, 32, 60, 0xffffccff);
 		r.drawFillRectangle(90, 90, 30, 20, 0xffccffff);
 	}

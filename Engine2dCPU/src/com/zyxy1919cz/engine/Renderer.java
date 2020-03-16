@@ -1,24 +1,39 @@
 package com.zyxy1919cz.engine;
 
 import java.awt.image.DataBufferInt;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 
 import com.zyxy1919cz.engine.gfx.Font;
 import com.zyxy1919cz.engine.gfx.Image;
+import com.zyxy1919cz.engine.gfx.ImageRequest;
 import com.zyxy1919cz.engine.gfx.ImageTile;
 
 public class Renderer
 {
+
+	private Font font = Font.STANDARD;
+	private ArrayList<ImageRequest> imageRequest = new ArrayList<ImageRequest>();
 	
 	private int pW, pH;
 	private int[] p;
+	private int[] zb;
+	private int[] lm;
+	private int[] lb;
 	
-	private Font font = Font.STANDARD;
+	private int zDepth = 0;
+	private boolean processing = false;
+	
 	
 	public Renderer(GameContainer gc)
 	{
 		pW = gc.getWidth();
 		pH = gc.getHeight();
-		p = ((DataBufferInt)gc.getWindow().getImage().getRaster().getDataBuffer()).getData();	
+		p = ((DataBufferInt)gc.getWindow().getImage().getRaster().getDataBuffer()).getData();
+		zb = new int[p.length];
+		lm = new int[p.length];
+		lb = new int[p.length];
 	}
 	
 	public void clear()
@@ -26,17 +41,93 @@ public class Renderer
 		for(int i = 0; i < p.length; i++)
 		{
 			p[i] = 0;
+			zb[i] = 0;
 		}
+	}
+	
+	public void process()
+	{
+		processing = true;
+		Collections.sort(imageRequest, new Comparator<ImageRequest>()
+		{
+			@Override
+			public int compare(ImageRequest i0, ImageRequest i1)
+			{
+				if(i0.zDepth < i0.zDepth)
+					return -1;
+				if(i0.zDepth > i0.zDepth)
+					return 1;
+				return 0;
+			}
+		});
+		
+		for(int i = 0; i < imageRequest.size(); i++)
+		{
+			ImageRequest ir = imageRequest.get(i);
+			setzDepth(ir.zDepth);
+			drawImage(ir.image, ir.offX, ir.offY);
+		}
+		
+		for (int i = 0; i < p.length; i++)
+		{
+			float r = ((lm[i] >> 16) & 0xff) / 255f;
+			float g = ((lm[i] >> 8) & 0xff) / 255f;
+			float b = (lm[i] & 0xff) / 255f;
+			
+			p[i] = ((int)(((p[i] >> 16) & 0xff) * r) << 16| ((int)(((p[i] >> 8) & 0xff) * g) << 8 | (int)((p[i] & 0xff) * b)));
+		}
+		
+		imageRequest.clear();
+		processing = false;
 	}
 	
 	public void setPixel(int x, int y, int value)
 	{
-		if((x < 0 || x >= pW || y < 0 || y >= pH) || value == 0xffff00ff)
+		int alpha = ((value >> 24) & 0xff);
+		
+		if((x < 0 || x >= pW || y < 0 || y >= pH) || alpha == 0)
 		{
 			return;
 		}
 		
-		p[x + y * pW] = value;
+		int index = x + y * pW;
+		
+		if(zb[index] > zDepth)
+			return;
+		
+		zb [index] = zDepth;
+		
+		if(alpha == 255)
+		{
+			p[index] = value;
+		}
+		else
+		{
+			int pixelColor = p[index];
+			
+			int newRed = ((pixelColor >> 16) & 0xff) - (int)((((pixelColor >> 16) & 0xff) - ((value >> 16) & 0xff)) * (alpha / 255f));
+			int newGreen = ((pixelColor >> 8) & 0xff) - (int)((((pixelColor >> 8) & 0xff) - ((value >> 8) & 0xff)) * (alpha / 255f));
+			int newBlue = (pixelColor & 0xff) - (int)(((pixelColor & 0xff) - (value & 0xff)) * (alpha / 255f));
+			
+			p[index] = (newRed << 16 | newGreen << 8 | newBlue);
+		}
+	}
+	
+	public void setLightMap(int x, int y, int value)
+	{
+		if(x < 0 || x >= pW || y < 0 || y >= pH)
+		{
+			return;
+		}
+		
+		int baseColor = lm[x + y * pW];
+		
+		int maxRed = Math.max((baseColor >> 16) & 0xff, (value >> 16) & 0xff);
+		int maxGreen = Math.max((baseColor >> 8) & 0xff, (value >> 8) & 0xff);
+		int maxBlue = Math.max(baseColor & 0xff, value & 0xff);
+		
+		
+		lm[x + y * pW] = (maxRed << 16 | maxGreen << 8 | maxBlue);
 	}
 	
 	public void drawText(String text, int offX, int offY, int color)
@@ -65,6 +156,12 @@ public class Renderer
 	
 	public void drawImage(Image image, int offX, int offY)
 	{		
+		if(image.isAlpha() && !processing)
+		{
+			imageRequest.add(new ImageRequest(image, zDepth, offX, offY));
+			return;
+		}
+		
 		//Don't render code
 		if(offX < -image.getW()) return;
 		if(offY < -image.getH()) return;
@@ -110,6 +207,12 @@ public class Renderer
 	
 	public void drawImageTile(ImageTile image, int offX, int offY, int tileX, int tileY)
 	{
+		if(image.isAlpha() && !processing)
+		{
+			imageRequest.add(new ImageRequest(image.getTileImage(tileX, tileY), zDepth, offX, offY));
+			return;
+		}
+		
 		//Don't render code
 		if(offX < -image.getTileW()) return;
 		if(offY < -image.getTileH()) return;
@@ -170,12 +273,20 @@ public class Renderer
 		if(newWidth + offX >= pW)	{newWidth -= newWidth + offX - pW;}
 		if(newHeight + offY >= pH)	{newHeight -= newHeight + offY - pH;}
 		
-		for(int y = newY; y <= newHeight; y++)
+		for(int y = newY; y < newHeight; y++)
 		{
 			for(int x = newX; x <= newWidth; x++)
 			{
 				setPixel(x + offX, y + offY, color);
 			}
 		}
+	}
+
+	public int getzDepth() {
+		return zDepth;
+	}
+
+	public void setzDepth(int zDepth) {
+		this.zDepth = zDepth;
 	}
 }
