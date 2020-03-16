@@ -47,7 +47,7 @@ public class Renderer
 		
 		for(int i = 0; i < text.length(); i++)
 		{
-			int unicode = text.codePointAt(1) - 32;
+			int unicode = text.codePointAt(i) - 32;
 			
 			for(int y = 0; y < font.getFontImage().getH(); y++)
 			{
@@ -122,25 +122,10 @@ public class Renderer
 		int newHeight = image.getTileH();
 		
 		//Clipping code
-		if(offX < 0)
-		{
-			newX -= offX;
-		}
-		
-		if(offY < 0)
-		{
-			newY -= offY;
-		}
-		
-		if(newWidth + offX >= pW)
-		{
-			newWidth -= newWidth + offX - pW;
-		}
-		
-		if(newHeight + offY >= pH)
-		{
-			newHeight -= newHeight + offY - pH;
-		}
+		if(offX < 0)	{newX -= offX;}
+		if(offY < 0)	{newY -= offY;}
+		if(newWidth + offX >= pW)	{newWidth -= newWidth + offX - pW;}
+		if(newHeight + offY >= pH)	{newHeight -= newHeight + offY - pH;}
 		
 		for(int y = newY; y < newHeight; y++)
 		{
@@ -151,5 +136,46 @@ public class Renderer
 		}
 	}
 	
+	public void drawRectangle(int offX, int offY, int width, int height, int color)
+	{			
+		for(int y = 0; y <= height; y++)
+		{
+			setPixel(offX, y + offX, color);
+			setPixel(offX + width, y + offX, color);
+		}
+		
+		for(int x = 0; x <= width; x++)
+		{
+			setPixel(x + offX, offY, color);
+			setPixel(x + offX, offY + height, color);
+		}
+	}
 	
+	public void drawFillRectangle(int offX, int offY, int width, int height, int color)
+	{
+		//Don't render code
+		if(offX < -width) return;
+		if(offY < -height) return;
+		if(offX >= pW) return;
+		if(offY >= pH) return;
+		
+		int newY = 0;
+		int newX = 0;
+		int newWidth = width;
+		int newHeight = height;
+		
+		//Clipping code
+		if(offX < 0)	{newX -= offX;}
+		if(offY < 0)	{newY -= offY;}
+		if(newWidth + offX >= pW)	{newWidth -= newWidth + offX - pW;}
+		if(newHeight + offY >= pH)	{newHeight -= newHeight + offY - pH;}
+		
+		for(int y = newY; y <= newHeight; y++)
+		{
+			for(int x = newX; x <= newWidth; x++)
+			{
+				setPixel(x + offX, y + offY, color);
+			}
+		}
+	}
 }
