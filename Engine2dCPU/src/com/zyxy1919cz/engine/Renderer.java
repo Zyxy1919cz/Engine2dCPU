@@ -9,6 +9,7 @@ import com.zyxy1919cz.engine.gfx.Font;
 import com.zyxy1919cz.engine.gfx.Image;
 import com.zyxy1919cz.engine.gfx.ImageRequest;
 import com.zyxy1919cz.engine.gfx.ImageTile;
+import com.zyxy1919cz.engine.gfx.Light;
 
 public class Renderer
 {
@@ -22,6 +23,7 @@ public class Renderer
 	private int[] lm;
 	private int[] lb;
 	
+	private int ambientColor = 0xff232323;
 	private int zDepth = 0;
 	private boolean processing = false;
 	
@@ -42,6 +44,7 @@ public class Renderer
 		{
 			p[i] = 0;
 			zb[i] = 0;
+			lm[i] = ambientColor;
 		}
 	}
 	
@@ -130,6 +133,19 @@ public class Renderer
 		lm[x + y * pW] = (maxRed << 16 | maxGreen << 8 | maxBlue);
 	}
 	
+	public void setLightBlock(int x, int y, int value)
+	{
+		if(x < 0 || x >= pW || y < 0 || y >= pH)
+		{
+			return;
+		}
+		
+		if(zb[x + y * pW] > zDepth)
+			return;
+		
+		lb[x + y * pW] = value;
+	}
+	
 	public void drawText(String text, int offX, int offY, int color)
 	{
 		
@@ -199,6 +215,7 @@ public class Renderer
 			for(int x = newX; x < newWidth; x++)
 			{
 				setPixel(x + offX, y + offY, image.getP()[x + y * image.getW()]);
+				setLightBlock(x + offX, y + offY, image.getLightBlock());
 			}
 		}
 		
@@ -235,6 +252,7 @@ public class Renderer
 			for(int x = newX; x < newWidth; x++)
 			{
 				setPixel(x + offX, y + offY, image.getP()[(x + tileX * image.getTileW()) + (y + tileY * image.getTileH()) * image.getW()]);
+				setLightBlock(x + offX, y + offY, image.getLightBlock());
 			}
 		}
 	}
@@ -280,6 +298,65 @@ public class Renderer
 				setPixel(x + offX, y + offY, color);
 			}
 		}
+	}
+	
+	public void drawLight(Light l, int offX, int offY)
+	{
+		for(int i = 0; i <= l.getDiametr(); i++)
+		{
+			drawLightLine(l, l.getRadius(), l.getRadius(), i, 0, offX, offY);
+			drawLightLine(l, l.getRadius(), l.getRadius(), i, l.getDiametr(), offX, offY);
+			drawLightLine(l, l.getRadius(), l.getRadius(), 0, i, offX, offY);
+			drawLightLine(l, l.getRadius(), l.getRadius(), l.getDiametr(), i, offX, offY);
+		}
+	}
+	
+	private void drawLightLine(Light l, int x0, int y0, int x1, int y1, int offX, int offY)
+	{
+		int dx = Math.abs(x1 - x0);
+		int dy = Math.abs(y1 - y0);
+		
+		int sx = x0 < x1 ? 1 : -1;
+		int sy = y0 < y1 ? 1 : -1;
+		
+		int err = dx - dy;
+		int e2;
+		
+		while(true)
+		{
+			int screenX = x0 - l.getRadius() + offX;
+			int screenY = y0 - l.getRadius() + offY;
+			
+			if(screenX < 0 || screenX >= pW || screenY < 0 || screenY >= pH)
+				return;
+			
+			int lightColor = l.getLightValue(x0, y0);
+			if(lightColor == 0)
+				return;
+			
+			if(lb[screenX + screenY * pW] == Light.FULL)
+				return;
+			
+			setLightMap(screenX, screenY, lightColor);
+			
+			if(x0 == x1 && y0 == y1)
+				break;
+			
+			e2 = 2 * err;
+			
+			if(e2 > -1 * dy)
+			{
+				err -= dy;
+				x0 += sx;
+			}
+			
+			if(e2 < dx)
+			{
+				err += dx;
+				y0 += sy;
+			}
+		}
+		
 	}
 
 	public int getzDepth() {

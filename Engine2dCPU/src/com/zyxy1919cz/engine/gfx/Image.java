@@ -10,6 +10,7 @@ public class Image
 	private int w,h;
 	private int[] p;
 	private boolean alpha = false;
+	private int LightBlock = Light.NONE;
 	
 	public Image(String path)
 	{
@@ -18,7 +19,6 @@ public class Image
 		try {
 			image = ImageIO.read(Image.class.getResourceAsStream(path));
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		
@@ -66,6 +66,14 @@ public class Image
 
 	public void setAlpha(boolean alpha) {
 		this.alpha = alpha;
+	}
+
+	public int getLightBlock() {
+		return LightBlock;
+	}
+
+	public void setLightBlock(int lightBlock) {
+		LightBlock = lightBlock;
 	}
 		
 }
