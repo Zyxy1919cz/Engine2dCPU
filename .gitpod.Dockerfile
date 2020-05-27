@@ -3,6 +3,8 @@ FROM gitpod/workspace-full
 USER gitpod
 
 RUN bash -c ". /home/gitpod/.sdkman/bin/sdkman-init.sh \
+             && sdk u                                  \
+             && sdk rm java 11.0.2.fx-zulu             \
              && sdk install java 13.0.2-open"
 
 # Install custom tools, runtime, etc. using apt-get
